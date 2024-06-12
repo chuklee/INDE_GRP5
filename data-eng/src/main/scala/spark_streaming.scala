@@ -2,7 +2,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{IntegerType, StringType, StructType}
 import org.apache.spark.sql.functions._
 
-object df_from_kafka {
+object spark_streaming {
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
       .appName("Kafka Spark Consumer")
