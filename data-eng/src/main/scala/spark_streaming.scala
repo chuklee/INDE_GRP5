@@ -1,8 +1,20 @@
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types.{IntegerType, StringType, StructType}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import com.twilio.Twilio
+import com.twilio.rest.api.v2010.account.Message
+import com.twilio
+import com.twilio.`type`.PhoneNumber
+
+case class GPSData(user_id: Long, latitude: Double, longitude: Double, timestamp: String)
 
 object spark_streaming {
+  // Twilio credentials
+  val ACCOUNT_SID = "ACe3696a2074bbc69159407b205fe6a170"
+  val AUTH_TOKEN = "553ae32e9f94a42a2dc475dfdafc9839"
+  val FROM_PHONE_NUMBER = "+12072927257" // Twilio phone number
+
+  Twilio.init(ACCOUNT_SID, AUTH_TOKEN)
+
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.builder()
       .appName("Kafka Spark Consumer")
@@ -12,12 +24,6 @@ object spark_streaming {
     import spark.implicits._
 
     spark.sparkContext.setLogLevel("ERROR")
-
-    // Define schema for CSV data
-    val schema = new StructType()
-      .add("user_id", IntegerType)
-      .add("user_name", StringType)
-      .add("user_city", StringType)
 
     // Read data from Kafka
     val kafkaDF = spark.readStream
@@ -33,23 +39,42 @@ object spark_streaming {
     val stringDF = kafkaDF.selectExpr("CAST(value AS STRING)").as[String]
 
     // Filter out the header row
-    val nonHeaderDF = stringDF.filter(row => !row.startsWith("user_id"))
+    val nonHeaderDF = stringDF.filter(row => !row.startsWith("latitude"))
 
-    // Split the CSV data and convert to DataFrame
-    val processedDF = nonHeaderDF.map { row =>
-      val fields = row.split(",")
-      (fields(0).toInt, fields(1), fields(2))
-    }.toDF("user_id", "user_name", "user_city")
+    // Split the CSV data and convert to DataFrame with GPSData case class
+    val gpsDF = nonHeaderDF.map { row =>
+      val fields = row.toString().split(",")
+      (fields(0).toString, fields(1).toString, fields(2).toString, fields(3).toString, fields(4).toString, fields(5).toDouble, fields(6).toDouble, fields(7))
+    }.toDF("user_id", "first_name", "last_name", "email", "job", "latitude", "longitude", "timestamp")
 
-    // Filter the DataFrame for users from a specific city, e.g., "Montreal"
-    val filteredDF = processedDF.filter("user_city == 'Montreal'")
+    // Filter the DataFrame for users within the specified latitude and longitude range
+    val filteredDF = gpsDF.filter($"latitude" >= 0 && $"latitude" <= 90 && $"longitude" >= 0 && $"longitude" <= 180)
 
-    // Write the processed data to a CSV file
+    // Function to send an SMS
+    def sendSMS(to: String, body: String): Unit = {
+      try {
+        val message = Message.creator(
+          new PhoneNumber(to),
+          new PhoneNumber(FROM_PHONE_NUMBER),
+          body
+        ).create()
+
+        println(s"SMS sent successfully: ${message.getSid}")
+      } catch {
+        case e: Exception => e.printStackTrace()
+      }
+    }
+
+    // Process each row to send an SMS
     val query = filteredDF.writeStream
       .outputMode("append")
-      .format("csv")
-      .option("checkpointLocation", "src/main/scala/checkpoint")
-      .option("path", "src/main/scala/output")
+      .foreachBatch { (batchDF: DataFrame, batchID: Long) =>
+        batchDF.collect().foreach { row =>
+          val userId = row.getAs[String]("user_id")
+          val body = s"User $userId is within the specified latitude and longitude range."
+          sendSMS("+33788133903", body) // Send SMS to the specified phone number
+        }
+      }
       .start()
 
     query.awaitTermination()
