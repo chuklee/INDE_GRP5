@@ -74,9 +74,10 @@ object spark_batch {
 
     // Run the streaming query for a specified duration, then stop
     // Run for 130 seconds
-    query.awaitTermination(130000)
+    //query.awaitTermination(130000)
+    query.awaitTermination()
 
     // Stop the query gracefully after the specified duration
-    query.stop()
+    //query.stop()
   }
 }
