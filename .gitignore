@@ -1,3 +1,10 @@
+
+# Spark generated files
+*.csv
+*.crc
+_spark_metadata
+checkpoint
+
 *.class
 *.log
 
