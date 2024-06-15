@@ -1,6 +1,5 @@
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-case class GPSData(user_id: Long, latitude: Double, longitude: Double, timestamp: String)
 
 object spark_streaming {
 
