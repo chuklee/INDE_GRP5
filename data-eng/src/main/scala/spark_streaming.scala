@@ -7,6 +7,7 @@ object spark_streaming {
     val spark = SparkSession.builder()
       .appName("Kafka Spark Consumer")
       .master("local[*]")
+      .config("spark.driver.extraJavaOptions", "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-exports=java.base/sun.nio.ch=ALL-UNNAMED")
       .getOrCreate()
 
     import spark.implicits._
@@ -16,7 +17,7 @@ object spark_streaming {
     // Read data from Kafka
     val kafkaDF = spark.readStream
       .format("kafka")
-      .option("kafka.bootstrap.servers", "localhost:9092")
+      .option("kafka.bootstrap.servers", "172.17.124.50:9092") // Remplacer par hostname -I sur WSL
       .option("subscribe", "my_topic")
       .option("startingOffsets", "earliest")
       .option("failOnDataLoss", "false")
@@ -27,28 +28,48 @@ object spark_streaming {
     val stringDF = kafkaDF.selectExpr("CAST(value AS STRING)").as[String]
 
     // Filter out the header row
-    val nonHeaderDF = stringDF.filter(row => !row.startsWith("latitude"))
+    val nonHeaderDF = stringDF.filter(row =>
+        !row.startsWith("user_id"))
+          /*|| !row.startsWith("user_id")
+          || !row.startsWith("firstname")
+          || !row.startsWith("location"))*/
 
-    // Split the CSV data and convert to DataFrame with GPSData case class
+    // Split the CSV data and convert to DataFrame with schema
     val gpsDF = nonHeaderDF.map { row =>
-      val fields = row.toString().split(",")
-      (fields(0).toString, fields(1).toString, fields(2).toString, fields(3).toString, fields(4).toString, fields(5).toDouble, fields(6).toDouble, fields(7))
-    }.toDF("user_id", "first_name", "last_name", "email", "job", "latitude", "longitude", "timestamp")
+      val fields = row.split(",")
+      (
+        fields(0).toInt, // user_id
+        fields(1), // first_name
+        fields(2) // location ex : 'Paris'
+      )
+    }.toDF("user_id", "firstname","location")
 
-    // Filter the DataFrame for users within the specified latitude and longitude range
-    //val filteredDF = gpsDF.filter($"latitude" >= 0 && $"latitude" <= 90 && $"longitude" >= 0 && $"longitude" <= 180)
-    val filteredDF = gpsDF.filter($"longitude" >= 0)
-    // || $"longitude" <= 180)
-    // || $"latitude" >= 0
+    // Transformation: Filter the DataFrame for users from a specific city, e.g., "Paris"
+    val filteredDF = gpsDF.filter("location == 'Paris'")
 
-    val query = filteredDF.writeStream
+    // Function to write to PostgreSQL
+    def writeToPostgres(df: DataFrame, batchId: Long): Unit = {
+      df.write
+        .format("jdbc")
+        .option("url", "jdbc:postgresql://localhost:5432/postgres")
+        .option("dbtable", "location")
+        .option("user", "postgres")
+        .option("password", "1234")
+        .mode("append")
+        .save()
+    }
+
+    // Write the data to PostgreSQL using foreachBatch
+    val postgresQuery = filteredDF.writeStream
       .outputMode("append")
-      .format("csv")
-      .option("checkpointLocation", "src/main/scala/checkpoint")
-      .option("path", "src/main/scala/output")
+      .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
+        println(s"Batch ID: $batchId")
+        batchDF.show(false)  // Show complete content for debugging
+        writeToPostgres(batchDF, batchId)
+      }
+      .option("checkpointLocation", "src/main/scala/checkpoint_postgres")
       .start()
 
-
-    query.awaitTermination()
+    postgresQuery.awaitTermination()
   }
 }
