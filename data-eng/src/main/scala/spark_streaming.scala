@@ -13,6 +13,17 @@ object spark_streaming {
     import spark.implicits._
 
     spark.sparkContext.setLogLevel("ERROR")
+    // Read forbidden areas from PostgreSQL
+    val forbiddenAreasDF = spark.read
+      .format("jdbc")
+      .option("url", "jdbc:postgresql://localhost:5432/postgres")
+      .option("dbtable", "forbidden_areas")
+      .option("user", "postgres")
+      .option("password", "1234")
+      .load()
+
+    // Broadcast the forbidden areas DataFrame
+    val broadcastForbiddenAreas = broadcast(forbiddenAreasDF)
 
     // Read data from Kafka
     val kafkaDF = spark.readStream
@@ -29,30 +40,38 @@ object spark_streaming {
 
     // Filter out the header row
     val nonHeaderDF = stringDF.filter(row =>
-        !row.startsWith("user_id"))
-          /*|| !row.startsWith("user_id")
-          || !row.startsWith("firstname")
-          || !row.startsWith("location"))*/
+        !row.startsWith("user_id")
+          && !row.startsWith("id"))
+          /*&& !row.startsWith("firstname")
+          && !row.startsWith("location"))*/
 
     // Split the CSV data and convert to DataFrame with schema
+    // Sample of one row : "13,Collen,Gower,Collen.Gower@yopmail.com,firefighter, champs élysées ,15-07-2024, 02:07:00"
     val gpsDF = nonHeaderDF.map { row =>
       val fields = row.split(",")
       (
         fields(0).toInt, // user_id
         fields(1), // first_name
-        fields(2) // location ex : 'Paris'
+        fields(2), // last_name
+        fields(3), // email
+        fields(4), // job
+        fields(5), // location ex : 'Paris'
+        fields(6) // date
       )
-    }.toDF("user_id", "firstname","location")
-
+    }.toDF("user_id", "firstname", "lastname", "email", "job", "location", "date")
+    // Convert the date column to timestamp
+    val formattedDF = gpsDF.withColumn("date", to_timestamp(col("date"), "yyyy-MM-dd HH:mm:ss"))
     // Transformation: Filter the DataFrame for users from a specific city, e.g., "Paris"
-    val filteredDF = gpsDF.filter("location == 'Paris'")
+    // Join with forbidden areas to filter the DataFrame
+    val filteredDF = formattedDF.join(broadcastForbiddenAreas, formattedDF("location") === broadcastForbiddenAreas("area"), "inner")
+      .select("user_id", "firstname", "lastname", "email", "job", "location", "date")
 
     // Function to write to PostgreSQL
     def writeToPostgres(df: DataFrame, batchId: Long): Unit = {
       df.write
         .format("jdbc")
         .option("url", "jdbc:postgresql://localhost:5432/postgres")
-        .option("dbtable", "location")
+        .option("dbtable", "alerte_utilisateur")
         .option("user", "postgres")
         .option("password", "1234")
         .mode("append")
@@ -63,8 +82,10 @@ object spark_streaming {
     val postgresQuery = filteredDF.writeStream
       .outputMode("append")
       .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
-        println(s"Batch ID: $batchId")
-        batchDF.show(false)  // Show complete content for debugging
+        /* FOR DEBUG PURPOSES ONLY  : */
+        //println(s"Batch ID: $batchId")
+        //batchDF.show(false)
+        /* FOR DEBUG PURPOSES ONLY */
         writeToPostgres(batchDF, batchId)
       }
       .option("checkpointLocation", "src/main/scala/checkpoint_postgres")
