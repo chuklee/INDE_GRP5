@@ -16,10 +16,10 @@ object spark_streaming {
     // Read forbidden areas from PostgreSQL
     val forbiddenAreasDF = spark.read
       .format("jdbc")
-      .option("url", "jdbc:postgresql://localhost:5432/postgres")
+      .option("url", "jdbc:postgresql://172.17.124.50:5432/postgres")
       .option("dbtable", "forbidden_areas")
       .option("user", "postgres")
-      .option("password", "1234")
+      .option("password", "abc")
       .load()
 
     // Broadcast the forbidden areas DataFrame
@@ -28,7 +28,7 @@ object spark_streaming {
     // Read data from Kafka
     val kafkaDF = spark.readStream
       .format("kafka")
-      .option("kafka.bootstrap.servers", "172.17.124.50:9092") // Remplacer par hostname -I sur WSL
+      .option("kafka.bootstrap.servers", "localhost:9092") // Remplacer par hostname -I sur WSL 172.17.124.50
       .option("subscribe", "my_topic")
       .option("startingOffsets", "earliest")
       .option("failOnDataLoss", "false")
@@ -39,10 +39,12 @@ object spark_streaming {
     val stringDF = kafkaDF.selectExpr("CAST(value AS STRING)").as[String]
 
     // Filter out the header row
-    val nonHeaderDF = stringDF.filter(row =>
+    val nonHeaderDF = stringDF.filter(row => !row.startsWith("id"))
+
+    /*val nonHeaderDF = stringDF.filter(row =>
         !row.startsWith("user_id")
           && !row.startsWith("id"))
-          /*&& !row.startsWith("firstname")
+          && !row.startsWith("firstname")
           && !row.startsWith("location"))*/
 
     // Split the CSV data and convert to DataFrame with schema
@@ -59,6 +61,7 @@ object spark_streaming {
         fields(6) // date
       )
     }.toDF("user_id", "firstname", "lastname", "email", "job", "location", "date")
+
     // Convert the date column to timestamp
     val formattedDF = gpsDF.withColumn("date", to_timestamp(col("date"), "yyyy-MM-dd HH:mm:ss"))
     // Transformation: Filter the DataFrame for users from a specific city, e.g., "Paris"
@@ -70,25 +73,26 @@ object spark_streaming {
     def writeToPostgres(df: DataFrame, batchId: Long): Unit = {
       df.write
         .format("jdbc")
-        .option("url", "jdbc:postgresql://localhost:5432/postgres")
+        .option("url", "jdbc:postgresql://172.17.124.50:5432/postgres")
         .option("dbtable", "alerte_utilisateur")
         .option("user", "postgres")
-        .option("password", "1234")
+        .option("password", "abc")
         .mode("append")
         .save()
     }
 
     // Write the data to PostgreSQL using foreachBatch
-    val postgresQuery = filteredDF.writeStream
+    val postgresQuery = filteredDF
+      .writeStream
       .outputMode("append")
       .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
         /* FOR DEBUG PURPOSES ONLY  : */
-        //println(s"Batch ID: $batchId")
-        //batchDF.show(false)
+        println(s"Batch ID: $batchId")
+        batchDF.show(false)
         /* FOR DEBUG PURPOSES ONLY */
         writeToPostgres(batchDF, batchId)
       }
-      .option("checkpointLocation", "src/main/scala/checkpoint_postgres")
+      //.option("checkpointLocation", "src/main/scala/checkpoint_postgres")
       .start()
 
     postgresQuery.awaitTermination()
