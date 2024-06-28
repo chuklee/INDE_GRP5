@@ -20,19 +20,10 @@ object spark_batch {
       .option("failOnDataLoss", "false")
       .option("auto.offset.reset", "earliest")
       .load()
-
     // Transformation des données Kafka (présumées en CSV) en DataFrame
     import spark.implicits._
     val chipData = kafkaDF.selectExpr("CAST(value AS STRING)").as[String]
-    val schema = new StructType()
-      .add("user_id", IntegerType)
-      .add("first_name", StringType)
-      .add("last_name", StringType)
-      .add("email", StringType)
-      .add("job", StringType)
-      .add("latitude", DoubleType)
-      .add("longitude", DoubleType)
-      .add("timestamp", StringType)
+
 
     // Filter out header rows (assuming the header starts with specific keywords)
     val dataframe_without_header = chipData
@@ -40,8 +31,7 @@ object spark_batch {
         val rowString = row.toString
         !rowString.startsWith("id") &&
           !rowString.startsWith("user_id") &&
-          !rowString.startsWith("latitude") &&
-          !rowString.startsWith("longitude") &&
+          !rowString.startsWith("street") &&
           !rowString.startsWith("timestamp")
       })
 
@@ -49,10 +39,9 @@ object spark_batch {
     val converted_and_parsedDF = dataframe_without_header
       .map { row =>
         val fields = row.toString().split(",")
-        (fields(0).toInt, fields(1).toString, fields(2).toString, fields(3).toString, fields(4).toString, fields(5).toDouble, fields(6).toDouble , fields(7))
+        (fields(0).toInt, fields(1).toString, fields(2).toString, fields(3).toString, fields(4).toString, fields(5) , fields(6))
       }
-      .toDF("user_id", "first_name", "last_name", "email", "job", "latitude", "longitude", "timestamp")
-
+      .toDF("user_id", "first_name", "last_name", "email", "job", "street", "timestamp")
     val writeToConsoleAndFile = (batchDF: org.apache.spark.sql.DataFrame, batchId: Long) => {
       // Afficher les données dans la console
       batchDF.show()
@@ -66,35 +55,30 @@ object spark_batch {
 
     // Convert timestamp from String to TimestampType
     val dataWithTimestamp = converted_and_parsedDF
-      .withColumn("timestamp", to_timestamp(col("timestamp"), "dd-MM-yyyy"))
-
+      .withColumn("timestamp", to_timestamp(col("timestamp"), "yyyy-MM-dd HH:mm:ss"))
     // Aggregation: Example of counting by user ID
     val aggregatedData = dataWithTimestamp
-      .withWatermark("timestamp", "1 second")
-      .groupBy(window(col("timestamp"), "1 second"), col("user_id"), col("longitude"),col("latitude")) // Regrouper par fenêtre de 1 minute
+      .withWatermark("timestamp", "1 day")
+      .groupBy( col("user_id"), window(col("timestamp"), "1 day"))
       .count()
-     .select(
-        col("window.start").as("window_start"),
-        col("window.end").as("window_end"),
+      .select(
         col("user_id"),
-        col("count"),
-        col("longitude"),
-        col("latitude")
+        col("count")
       )
-
+    // Debugging après l'agrégation
     // Define the output directory for weekly reports
-    val query = aggregatedData
+    val query = dataWithTimestamp
       .writeStream
       .foreachBatch(writeToConsoleAndFile)
       .outputMode("append") // Utiliser 'append' ou 'complete' selon votre cas d'utilisation
-      .format("console")
-      .trigger(Trigger.ProcessingTime("60 seconds"))
-      .start()
-      /*.format("csv") // Utiliser 'parquet', 'json', ou autre format de fichier
-      .option("path", "/mnt/c/Users/vince/INDE_GRP5/data-eng/src/main/scala/spark_output/batch_output") // Remplacer par le chemin de votre répertoire de sortie
-      .option("checkpointLocation", "/mnt/c/Users/vince/INDE_GRP5/data-eng/src/main/scala/spark_output/batch_checkpoint") // Chemin pour la sauvegarde de point de contrôle
+      /*.format("console")
       .trigger(Trigger.ProcessingTime("60 seconds"))
       .start()*/
+     .format("csv") // Utiliser 'parquet', 'json', ou autre format de fichier
+     .option("path", "/mnt/c/Users/vince/INDE_GRP5/data-eng/src/main/scala/spark_output/batch_output") // Remplacer par le chemin de votre répertoire de sortie
+     .option("checkpointLocation", "/mnt/c/Users/vince/INDE_GRP5/data-eng/src/main/scala/spark_output/batch_checkpoint") // Chemin pour la sauvegarde de point de contrôle
+     .trigger(Trigger.ProcessingTime("60 seconds"))
+     .start()
 
     // Run the streaming query for a specified duration, then stop
     // Run for 130 seconds
