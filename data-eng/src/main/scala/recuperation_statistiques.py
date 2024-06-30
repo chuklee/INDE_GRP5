@@ -3,9 +3,35 @@ import os
 from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
+import psycopg2
 
-# Liste des rues interdites
-rues_interdites = ['ISSOU', 'Mickey', 'Lachacnl', 'Liverpool']
+# Fonction pour récupérer les zones interdites depuis la base de données
+def recuperer_zones_interdites():
+    conn_params = {
+        'dbname': 'postgres',
+        'user': 'postgres',
+        'password': 'abc',
+        'host': '172.28.85.10',
+        'port': '5432'
+    }
+
+    try:
+        conn = psycopg2.connect(**conn_params)
+        cursor = conn.cursor()
+        cursor.execute("SELECT area FROM forbidden_areas;")
+        rows = cursor.fetchall()
+        return [row[0] for row in rows]
+    except Exception as e:
+        print(f"Erreur lors de la connexion ou de la récupération des données: {e}")
+        return []
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# Liste des rues interdites récupérées de la base de données
+rues_interdites = recuperer_zones_interdites()
 
 # Compteur pour les rues interdites
 compteur_rues = Counter()
@@ -55,7 +81,7 @@ plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
 
 # Ajuster la position des sous-plots pour éviter le chevauchement
-plt.subplots_adjust(bottom=0.3)
+plt.subplots_adjust(bottom=0.25)
 
 # Trouver les 3 rues les plus fréquentées
 rues_et_frequentations = sorted(compteur_rues.items(), key=lambda item: item[1], reverse=True)
@@ -63,7 +89,7 @@ top_3_rues = rues_et_frequentations[:3]
 
 # Ajouter une phrase en dessous des 3 rues les plus fréquentées
 message = "Attention, renforcer les contrôles de police !"
-plt.text(0.5, -0.2, message, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
+plt.text(0.5, -0.3, message, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
 
 # Affichage du graphique
 plt.show()

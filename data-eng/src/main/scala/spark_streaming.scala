@@ -16,7 +16,7 @@ object spark_streaming {
     // Read forbidden areas from PostgreSQL
     val forbiddenAreasDF = spark.read
       .format("jdbc")
-      .option("url", "jdbc:postgresql://172.17.124.50:5432/postgres")
+      .option("url", "jdbc:postgresql://172.28.85.10:5432/postgres")
       .option("dbtable", "forbidden_areas")
       .option("user", "postgres")
       .option("password", "abc")
@@ -73,7 +73,7 @@ object spark_streaming {
     def writeToPostgres(df: DataFrame, batchId: Long): Unit = {
       df.write
         .format("jdbc")
-        .option("url", "jdbc:postgresql://172.17.124.50:5432/postgres")
+        .option("url", "jdbc:postgresql://172.28.85.10:5432/postgres")
         .option("dbtable", "alerte_utilisateur")
         .option("user", "postgres")
         .option("password", "abc")
