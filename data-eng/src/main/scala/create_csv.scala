@@ -56,7 +56,17 @@ object create_csv_and_send_to_kafka {
 
     // Send to Kafka
     val record = new ProducerRecord[String, String]("report", csvFile, samples.mkString("\n"))
-    producer.send(record)
+    producer.send(record, new Callback {
+      override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
+        if (exception == null) {
+          println(s"Message sent successfully to topic ${metadata.topic()}")
+          println(s"Partition: ${metadata.partition()}, Offset: ${metadata.offset()}")
+          println(s"Timestamp: ${metadata.timestamp()}")
+        } else {
+          println(s"Failed to send message: ${exception.getMessage}")
+        }
+      }
+    })
 
     startId + 100000
   }
