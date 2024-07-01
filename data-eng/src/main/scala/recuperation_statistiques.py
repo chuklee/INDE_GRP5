@@ -1,5 +1,5 @@
-import csv
 import os
+import csv
 from collections import Counter
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,15 +36,21 @@ rues_interdites = recuperer_zones_interdites()
 # Compteur pour les rues interdites
 compteur_rues = Counter()
 
-# Fonction pour lire le CSV et compter les rues interdites
-def compter_rues_interdites(nom_fichier_csv):
+# Compteur pour les âges
+compteur_ages = Counter()
+
+# Fonction pour lire le CSV et compter les rues interdites et les âges
+def compter_rues_et_ages_interdits(nom_fichier_csv):
     with open(nom_fichier_csv, newline='', encoding='utf-8') as csvfile:
         lecteur_csv = csv.reader(csvfile)
         for ligne in lecteur_csv:
-            # La rue se trouve à la colonne 6 (index 5 car les index commencent à 0)
             rue = ligne[5]
+            age = int(ligne[7])
             if rue in rues_interdites:
                 compteur_rues[rue] += 1
+                # Compter l'âge dans l'intervalle approprié
+                intervalle_age = (age // 10) * 10
+                compteur_ages[intervalle_age] += 1
 
 # Répertoire contenant les fichiers CSV
 repertoire_csv = 'spark_output/batch_output'
@@ -53,13 +59,13 @@ repertoire_csv = 'spark_output/batch_output'
 for nom_fichier in os.listdir(repertoire_csv):
     if nom_fichier.endswith('.csv'):
         chemin_fichier = os.path.join(repertoire_csv, nom_fichier)
-        compter_rues_interdites(chemin_fichier)
+        compter_rues_et_ages_interdits(chemin_fichier)
 
-# Affichage des résultats
+# Affichage des résultats pour les rues interdites
 for rue, count in compteur_rues.items():
     print(f"La rue '{rue}' a été fréquentée {count} fois.")
 
-# Création du graphique
+# Création du graphique des rues interdites
 rues = list(compteur_rues.keys())
 frequentations = list(compteur_rues.values())
 
@@ -81,7 +87,7 @@ plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
 
 # Ajuster la position des sous-plots pour éviter le chevauchement
-plt.subplots_adjust(bottom=0.25)
+plt.subplots_adjust(bottom=0.35)
 
 # Trouver les 3 rues les plus fréquentées
 rues_et_frequentations = sorted(compteur_rues.items(), key=lambda item: item[1], reverse=True)
@@ -90,6 +96,42 @@ top_3_rues = rues_et_frequentations[:3]
 # Ajouter une phrase en dessous des 3 rues les plus fréquentées
 message = "Attention, renforcer les contrôles de police !"
 plt.text(0.5, -0.3, message, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
+
+# Affichage du graphique
+plt.show()
+
+# Affichage des résultats pour les âges
+for intervalle, count in compteur_ages.items():
+    print(f"Les personnes de {intervalle} à {intervalle+9} ans ont été rencontrées {count} fois dans les rues interdites.")
+
+# Création du graphique des âges
+intervalles = list(compteur_ages.keys())
+frequentations_ages = list(compteur_ages.values())
+
+# Ordonner les intervalles
+intervalles.sort()
+
+# Définir une liste de couleurs différentes
+couleurs_ages = plt.cm.tab20(np.linspace(0, 1, len(intervalles)))
+
+plt.figure(figsize=(10, 6))
+bars = plt.bar(intervalles, frequentations_ages, width=8, align='edge', color=couleurs_ages)
+plt.xlabel('Tranches d\'âges (années)', labelpad=20)
+plt.ylabel('Nombre de Fréquentations', labelpad=20)
+plt.title('Fréquentation des Rues Interdites par Tranche d\'Âge')
+plt.xticks(intervalles, [f'{i}-{i+9} ans' for i in intervalles], rotation=45)
+
+# Définir l'échelle des ordonnées pour utiliser uniquement des entiers
+max_frequentations_ages = max(frequentations_ages) if frequentations_ages else 1
+plt.yticks(range(0, max_frequentations_ages + 1))
+
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.subplots_adjust(bottom=0.35)
+
+# Ajouter une phrase en dessous du graphique
+message_ages = "Augmentation de l'impôt sur le revenu pour les tranches d'âges réfractaires fortement conseillé."
+plt.text(0.5, -0.4, message_ages, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
 
 # Affichage du graphique
 plt.show()

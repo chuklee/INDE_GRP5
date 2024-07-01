@@ -2,9 +2,9 @@ import java.sql.{Connection, DriverManager, PreparedStatement}
 
 object ManageForbiddenAreas {
   // Paramètres de connexion à la base de données
-  val url = "jdbc:postgresql://localhost:5432/votre_base_de_donnees"
-  val user = "votre_utilisateur"
-  val password = "votre_mot_de_passe"
+  val url = "jdbc:postgresql://172.28.85.10:5432/postgres"
+  val user = "postgres"
+  val password = "abc"
 
   def main(args: Array[String]): Unit = {
     if (args.length < 2) {

@@ -15,7 +15,7 @@ object spark_batch {
       .readStream
       .format("kafka")
       .option("kafka.bootstrap.servers", "localhost:9092") // Remplacer par votre serveur Kafka
-      .option("subscribe", "my_topic") // Remplacer par votre nom de topic
+      .option("subscribe", "report") // Remplacer par votre nom de topic
       .option("startingOffsets", "earliest") // Lire depuis le début du topic
       .option("failOnDataLoss", "false")
       .option("auto.offset.reset", "earliest")
@@ -39,9 +39,9 @@ object spark_batch {
     val converted_and_parsedDF = dataframe_without_header
       .map { row =>
         val fields = row.toString().split(",")
-        (fields(0).toInt, fields(1).toString, fields(2).toString, fields(3).toString, fields(4).toString, fields(5) , fields(6))
+        (fields(0).toInt, fields(1).toString, fields(2).toString, fields(3).toString, fields(4).toString, fields(5) , fields(6), fields(7).toString)
       }
-      .toDF("user_id", "first_name", "last_name", "email", "job", "street", "timestamp")
+      .toDF("user_id", "first_name", "last_name", "email", "job", "street", "timestamp", "age")
     val writeToConsoleAndFile = (batchDF: org.apache.spark.sql.DataFrame, batchId: Long) => {
       // Afficher les données dans la console
       batchDF.show()
