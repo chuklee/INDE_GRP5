@@ -18,3 +18,5 @@ libraryDependencies += "org.apache.spark" %% "spark-sql-kafka-0-10" % "3.5.1"
 
 // To write to postgres database
 libraryDependencies += "org.postgresql" % "postgresql" % "42.7.3"
+
+libraryDependencies += "org.apache.kafka" % "kafka-clients" % "3.4.0"
