@@ -4,8 +4,9 @@ ThisBuild / scalaVersion := "2.13.13"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "data-eng"
+    name := "spark_streaming"
   )
+
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "3.5.1"
 
@@ -19,4 +20,11 @@ libraryDependencies += "org.apache.spark" %% "spark-sql-kafka-0-10" % "3.5.1"
 // To write to postgres database
 libraryDependencies += "org.postgresql" % "postgresql" % "42.7.3"
 
-libraryDependencies += "org.apache.kafka" % "kafka-clients" % "3.4.0"
+
+javaOptions ++= Seq(
+  "-Xms512M",
+  "-Xmx1024M",
+  "-Xss1M",
+  "-XX:+CMSClassUnloadingEnabled",
+  "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
+)
