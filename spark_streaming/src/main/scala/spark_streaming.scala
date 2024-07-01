@@ -28,7 +28,7 @@ object spark_streaming {
     // Read data from Kafka
     val kafkaDF = spark.readStream
       .format("kafka")
-      .option("kafka.bootstrap.servers", "localhost:9092") // Remplacer par hostname -I sur WSL 172.17.124.50
+      .option("kafka.bootstrap.servers", "172.17.124.50:9092") // Remplacer par hostname -I sur WSL 172.17.124.50
       .option("subscribe", "my_topic")
       .option("startingOffsets", "earliest")
       .option("failOnDataLoss", "false")
@@ -58,16 +58,17 @@ object spark_streaming {
         fields(3), // email
         fields(4), // job
         fields(5), // location ex : 'Paris'
-        fields(6) // date
+        fields(6), // date
+        fields(7).toInt // age
       )
-    }.toDF("user_id", "firstname", "lastname", "email", "job", "location", "date")
+    }.toDF("user_id", "firstname", "lastname", "email", "job", "location", "date", "age")
 
     // Convert the date column to timestamp
     val formattedDF = gpsDF.withColumn("date", to_timestamp(col("date"), "yyyy-MM-dd HH:mm:ss"))
     // Transformation: Filter the DataFrame for users from a specific city, e.g., "Paris"
     // Join with forbidden areas to filter the DataFrame
     val filteredDF = formattedDF.join(broadcastForbiddenAreas, formattedDF("location") === broadcastForbiddenAreas("area"), "inner")
-      .select("user_id", "firstname", "lastname", "email", "job", "location", "date")
+      .select("user_id", "firstname", "lastname", "email", "job", "location", "date", "age")
 
     // Function to write to PostgreSQL
     def writeToPostgres(df: DataFrame, batchId: Long): Unit = {
@@ -87,8 +88,8 @@ object spark_streaming {
       .outputMode("append")
       .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
         /* FOR DEBUG PURPOSES ONLY  : */
-        println(s"Batch ID: $batchId")
-        batchDF.show(false)
+        // println(s"Batch ID: $batchId")
+        // batchDF.show(false)
         /* FOR DEBUG PURPOSES ONLY */
         writeToPostgres(batchDF, batchId)
       }
