@@ -3,7 +3,9 @@ import asyncpg
 import asyncio
 import logging
 
-TOKEN = 'MTI1MTIwODQ3MTE2OTMzOTQyMg.GixiIs.3jzanpEWX0RrMTzEKxIXOYDxAkF_d_pyVrDKo8'
+old_token = 'MTI1MTIwODQ3MTE2OTMzOTQyMg.GixiIs.3jzanpEWX0RrMTzEKxIXOYDxAkF_d_pyVrDKo8'
+
+TOKEN = 'MTI1MTIwODQ3MTE2OTMzOTQyMg.G7iz-h.cHMsaj2g15KqXFRtxrLt1gjXq14z9W1bXZxXww'
 CHANNEL_ID = 1251211675974242367
 DATABASE_URL = 'postgresql://postgres:abc@172.28.85.10:5432/postgres'  # Your PostgreSQL connection string
 # Configure logging
