@@ -13,67 +13,63 @@ Lorsque que l’individu entre dans une zone interdite, la puce se met à vibrer
 
 Le gouvernement peut ajouter de nouvelles zones interdites à tout moment en fonction de la situation.
 
-Cette mesure prise par l'État vise bien sûr à “récompenser” les citoyens les plus obéissants.
+Cette mesure prise par l'État vise bien sûr à “récompenser” les citoyens les plus obéissants. Par exemple il peut exiger à la fin du mois, un rapport avec les personnes qui ont été le plus assidues, et celles qui ont été les plus dissidentes, afin de les punir.
 
   
 
 ## Outils utilisés et implémentation:
 
-  
-
-Afin d’activer le compte utilisateur lors de l’injection, celle-ci va envoyer au démarrage un user_id configuré au préalable avant l’injection afin de signaler au système que celle-ci est maintenant active.
-
-  
-
 Toutes les puces vont émettre à une certaine fréquence des données de :
 
+-   User_id
+    
+-   Nom
+    
+-   Prénom
+    
+-   Métier
+    
+-   email
+    
 -   Timestamp
     
 -   Position (nom de rue actuel)
     
--   User_id
+-   Âge
     
 
   
 
-La stream Kafka aura cette forme :
+Ces données vont être gérées par une <u>stream</u> Kafka.
+
+Celle-ci aura cette forme :
+
+<u>Producer</u>:
+
+-   Envoi des informations (id, âge, coordonnées,  etc) des personnes en temps réel (puce vaccin)
+
+<u>Consumer</u>:
+
+-   Système de création de statistique / rapports
+-   Système de vérification de localisation et envoie de message en cas d'alerte  / urgence
 
   
 
-Producer:
+<u>Spark Consumers in Scala :</u>
 
--   Envoi des coordonnées des personnes en temps réel (puce vaccin)
-    
--   Système d’inscription de la puce dans le système (puce vaccin)
-    
--   Ajout de rue interdite (État)
-    
+Le premier consommateur Spark (Batch Processing) servira à réaliser les statistiques sur les déplacement de la population.
 
-Consumer:
+Il va lire les messages dans la stream Kafka et écrire ces messages traités dans un datalake.
 
--   Système de création de statistique
-    
--   Système de vérification de localisation
-    
--   Demande
-    
+Le second quant à lui (Streaming Processing) permettra la gestion des emplacements interdits et d’envoyer une alerte de la puce si l’utilisateur ne respecte pas les emplacements interdits.
 
-  
-  
+<u>Storage :</u>
 
-Spark Consumers in Scala :
-
-Le premier consommateur Spark servira à réaliser les statistiques sur les déplacement de la population
-
-Le second quant à lui permettra la gestion des emplacements interdits et d’envoyer une alerte de la puce si l’utilisateur ne respecte pas les emplacements interdits.
-
-  
-  
 
 Les données traitées seront ensuite stockées dans différentes bases de données.
 
--   Cassandra car besoin de temps réel sur les emplacements interdits
-    
--   MySQL pour les rapports demandés par le gouvernement nécessitant donc une gestion fiable sans besoin d’instantanéité
-    
--   Redis Databases clés–valeurs des puces associés à leur utilisateurs
+-   Datalake (en local) pour stocker les information essentielles aux rapports demandés par le gouvernement
+-   Les rapports nécessitent une gestion fiable sans besoin d’instantanéité.
+-   Le contenu du datalake sera donc traité pour créer des rapports une fois unique de manière distribuée en utilisant un dernier composant Spark.
+-   Celui-ci permettra d'avoir des données parfaitement traitée pour répondre à plusieurs questions simples (Exemple : quels sont les corps de métiers les plus dissidents ?) et pour la génération de rapports.
+-   MySQL (PostgreSQL) pour stocker les utilisateurs qui sont dans un endroit interdit afin de les envoyer une alerte (message qui sera envoyé via discord)
