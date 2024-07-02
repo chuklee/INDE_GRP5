@@ -157,7 +157,8 @@ plt.title('Fréquentation des Rues Interdites par Métiers (Top 10)')
 plt.xticks(rotation=45)
 
 max_frequentations_jobs = max(frequentations_jobs) if frequentations_jobs else 1
-plt.yticks(range(0, max_frequentations_jobs + 1))
+step_job = max_frequentations_jobs // 10 + 1
+plt.yticks(np.arange(0, max_frequentations_jobs + 1, step=step_job))
 
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
