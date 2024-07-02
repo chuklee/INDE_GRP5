@@ -11,7 +11,8 @@ CREATE TABLE alerte_utilisateur (
                                     email VARCHAR(255),
                                     job VARCHAR(255),
                                     location VARCHAR(255),
-                                    date TIMESTAMP
+                                    date TIMESTAMP,
+                                    age INTEGER
                                 );
 
 CREATE TABLE forbidden_areas (

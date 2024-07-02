@@ -5,7 +5,7 @@ import logging
 
 TOKEN = 'MTI1MTIwODQ3MTE2OTMzOTQyMg.GixiIs.3jzanpEWX0RrMTzEKxIXOYDxAkF_d_pyVrDKo8'
 CHANNEL_ID = 1251211675974242367
-DATABASE_URL = 'postgresql://postgres:1234@localhost:5432/postgres'  # Your PostgreSQL connection string
+DATABASE_URL = 'postgresql://postgres:abc@localhost:5432/postgres'  # Your PostgreSQL connection string
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
