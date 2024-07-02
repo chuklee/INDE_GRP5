@@ -3,9 +3,9 @@ import java.sql.{Connection, DriverManager, ResultSet}
 object FetchUsers {
   def main(args: Array[String]): Unit = {
     // Paramètres de connexion à la base de données
-    val url = "jdbc:postgresql://localhost:5432/votre_base_de_donnees"
-    val user = "votre_utilisateur"
-    val password = "votre_mot_de_passe"
+    val url = "jdbc:postgresql://172.28.85.10:5432/postgres"
+    val user = "postgres"
+    val password = "abc"
 
     // Établir la connexion
     val connection: Connection = DriverManager.getConnection(url, user, password)

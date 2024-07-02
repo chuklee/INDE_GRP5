@@ -4,7 +4,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Properties
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import scala.collection.parallel.CollectionConverters.ImmutableIterableIsParallelizable
 import scala.util.Random
 import org.apache.kafka.clients.producer._
 
@@ -34,7 +33,7 @@ object create_csv_and_send_to_kafka {
     writer.close()
   }
 
-  def generateCsvAndSendToKafka(startId: Int): Int = {
+  def generateSampleAndSendToKafka(startId: Int): Int = {
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
     val currentTime = LocalDateTime.now()
     val random = new Random()
@@ -46,18 +45,34 @@ object create_csv_and_send_to_kafka {
     }
 
     val header = "id,Name,Surname,email,job,street,timestamp,age"
-    val samples = (startId until startId + 100000).map(generateSample).toList.par
 
-    // Write to CSV file
+    // Write header to CSV file
     val writer = new PrintWriter(new File(csvFile))
     writer.write(s"$header\n")
-    samples.foreach(sample => writer.write(s"$sample\n"))
+
+    // Generate samples and send to Kafka row by row
+    for (id <- startId until startId + 100000) {
+      val sample = generateSample(id)
+
+      // Write to CSV file
+      writer.write(s"$sample\n")
+
+      // Send to Kafka
+      val record = new ProducerRecord[String, String]("report", id.toString, sample)
+      producer.send(record, new Callback {
+        override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
+          if (exception == null) {
+            println(s"Message for ID $id sent successfully to topic ${metadata.topic()}")
+            println(s"Partition: ${metadata.partition()}, Offset: ${metadata.offset()}")
+            println(s"Timestamp: ${metadata.timestamp()}")
+          } else {
+            println(s"Failed to send message for ID $id: ${exception.getMessage}")
+          }
+        }
+      })
+    }
+
     writer.close()
-
-    // Send to Kafka
-    val record = new ProducerRecord[String, String]("report", csvFile, samples.mkString("\n"))
-    producer.send(record)
-
     startId + 100000
   }
 
@@ -66,7 +81,7 @@ object create_csv_and_send_to_kafka {
     val task = new Runnable {
       def run(): Unit = {
         val lastId = readLastId()
-        val newLastId = generateCsvAndSendToKafka(lastId + 1)
+        val newLastId = generateSampleAndSendToKafka(lastId + 1)
         writeLastId(newLastId)
       }
     }

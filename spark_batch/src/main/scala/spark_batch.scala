@@ -49,7 +49,7 @@ object spark_batch {
       batchDF.write
         .mode("append") // Utiliser 'append' ou 'complete' selon votre cas d'utilisation
         .format("csv") // Utiliser 'parquet', 'json', ou autre format de fichier
-        .option("path", "/mnt/c/Users/Vincent/INDE_GRP5/data-eng/src/main/scala/spark_output/batch_output") // Remplacer par le chemin de votre répertoire de sortie
+        .option("path", "/mnt/c/Users/Vincent/INDE_GRP5/spark_batch/src/main/scala/spark_output/batch_output") // Remplacer par le chemin de votre répertoire de sortie
         .save()
     }
 
@@ -75,9 +75,9 @@ object spark_batch {
       .trigger(Trigger.ProcessingTime("60 seconds"))
       .start()*/
      .format("csv") // Utiliser 'parquet', 'json', ou autre format de fichier
-     .option("path", "/mnt/c/Users/Vincent/INDE_GRP5/data-eng/src/main/scala/spark_output/batch_output") // Remplacer par le chemin de votre répertoire de sortie
-     .option("checkpointLocation", "/mnt/c/Users/Vincent/INDE_GRP5/data-eng/src/main/scala/spark_output/batch_checkpoint") // Chemin pour la sauvegarde de point de contrôle
-     .trigger(Trigger.ProcessingTime("60 seconds"))
+     .option("path", "/mnt/c/Users/Vincent/INDE_GRP5/spark_batch/src/main/scala/spark_output/batch_output") // Remplacer par le chemin de votre répertoire de sortie
+     .option("checkpointLocation", "/mnt/c/Users/Vincent/INDE_GRP5/spark_batch/src/main/scala/spark_output/batch_checkpoint") // Chemin pour la sauvegarde de point de contrôle
+     .trigger(Trigger.ProcessingTime("120 seconds"))
      .start()
 
     // Run the streaming query for a specified duration, then stop

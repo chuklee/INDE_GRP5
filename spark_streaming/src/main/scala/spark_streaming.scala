@@ -28,8 +28,8 @@ object spark_streaming {
     // Read data from Kafka
     val kafkaDF = spark.readStream
       .format("kafka")
-      .option("kafka.bootstrap.servers", "172.17.124.50:9092") // Remplacer par hostname -I sur WSL 172.17.124.50
-      .option("subscribe", "my_topic")
+      .option("kafka.bootstrap.servers", "localhost:9092") // Remplacer par hostname -I sur WSL 172.17.124.50
+      .option("subscribe", "report")
       .option("startingOffsets", "earliest")
       .option("failOnDataLoss", "false")
       .option("auto.offset.reset", "earliest")
