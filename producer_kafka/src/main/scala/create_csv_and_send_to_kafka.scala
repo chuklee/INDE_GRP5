@@ -42,7 +42,8 @@ object create_csv_and_send_to_kafka {
       val timestamp = currentTime.plusSeconds(id - startId).format(formatter)
       val age = 18 + random.nextInt(63) // Generate random age between 18 and 80
       val streetNumber = random.nextInt(1001) // Generate random street number between 0 and 1000
-      s"$id,Name$id,Surname$id,email$id@domain.com,job$id,street$streetNumber,$timestamp,$age"
+      val jobNumber = random.nextInt(100)
+      s"$id,Name$id,Surname$id,email$id@domain.com,job$jobNumber,street$streetNumber,$timestamp,$age"
     }
 
     val header = "id,Name,Surname,email,job,street,timestamp,age"

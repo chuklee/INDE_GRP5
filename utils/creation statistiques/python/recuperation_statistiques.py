@@ -36,6 +36,7 @@ def lire_compteur_jobs(nom_fichier_csv):
             count = int(ligne['count'])
             compteur_jobs[job] += count
     return compteur_jobs
+
 # Lire les résultats des heures
 def lire_compteur_heures(nom_fichier_csv):
     compteur_heures = Counter()
@@ -46,6 +47,7 @@ def lire_compteur_heures(nom_fichier_csv):
             count = int(ligne['count'])
             compteur_heures[heure] += count
     return compteur_heures
+
 # Chemins vers les fichiers CSV générés par Spark
 chemin_compteur_rues = 'input_python/compteur_rues'
 chemin_compteur_ages = 'input_python/compteur_ages'
@@ -69,9 +71,11 @@ for fichier in fichiers_ages:
 compteur_jobs = Counter()
 for fichier in fichiers_jobs:
     compteur_jobs.update(lire_compteur_jobs(fichier))
+
 compteur_heures = Counter()
 for fichier in fichiers_heures:
     compteur_heures.update(lire_compteur_heures(fichier))
+
 # Affichage des résultats pour les rues interdites
 for rue, count in compteur_rues.items():
     print(f"La rue '{rue}' a été fréquentée {count} fois.")
@@ -88,16 +92,16 @@ plt.xlabel('Rues Interdites', labelpad=20)
 plt.ylabel('Nombre de Fréquentations', labelpad=20)
 plt.title('Fréquentation des Rues Interdites')
 plt.xticks(rotation=45)
-
 max_frequentations = max(frequentations) if frequentations else 1
-plt.yticks(range(0, max_frequentations + 1))
+step_rue = max_frequentations // 10 + 1
+plt.yticks(np.arange(0, max_frequentations +1 , step=step_rue))
 
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
 plt.subplots_adjust(bottom=0.35)
 
 message = "Attention, renforcer les contrôles de police !"
-plt.text(0.5, -0.3, message, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
+plt.text(0.5, -0.4, message, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
 
 plt.show()
 
@@ -121,7 +125,8 @@ plt.title('Fréquentation des Rues Interdites par Tranche d\'Âge')
 plt.xticks(intervalles, [f'{i}-{i+9} ans' for i in intervalles], rotation=45)
 
 max_frequentations_ages = max(frequentations_ages) if frequentations_ages else 1
-plt.yticks(range(0, max_frequentations_ages + 1))
+step_age = max_frequentations_ages // 10 + 1
+plt.yticks(np.arange(0, max_frequentations_ages + 1, step=step_age))
 
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
@@ -131,13 +136,16 @@ message_ages = "Augmentation de l'impôt sur le revenu pour les tranches d'âges
 plt.text(0.5, -0.4, message_ages, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
 
 plt.show()
+
 # Affichage des résultats pour les métiers
 for job, count in compteur_jobs.items():
     print(f"Le métier '{job}' a été rencontré {count} fois dans les rues interdites.")
 
-# Création du graphique des métiers
-jobs = list(compteur_jobs.keys())
-frequentations_jobs = list(compteur_jobs.values())
+# Sélectionner les 10 métiers les plus représentés
+top_10_jobs = compteur_jobs.most_common(10)
+
+# Extraire les jobs et leurs fréquences
+jobs, frequentations_jobs = zip(*top_10_jobs)
 
 couleurs_jobs = plt.cm.tab20(np.linspace(0, 1, len(jobs)))
 
@@ -145,7 +153,7 @@ plt.figure(figsize=(10, 6))
 bars = plt.bar(jobs, frequentations_jobs, color=couleurs_jobs)
 plt.xlabel('Métiers', labelpad=20)
 plt.ylabel('Nombre de Fréquentations', labelpad=20)
-plt.title('Fréquentation des Rues Interdites par Métiers')
+plt.title('Fréquentation des Rues Interdites par Métiers (Top 10)')
 plt.xticks(rotation=45)
 
 max_frequentations_jobs = max(frequentations_jobs) if frequentations_jobs else 1
@@ -159,6 +167,7 @@ message_jobs = "Attention aux métiers réfractaires - Réduction des salaires d
 plt.text(0.5, -0.4, message_jobs, ha='center', va='center', transform=plt.gca().transAxes, fontsize=12, color='red')
 
 plt.show()
+
 # Affichage des résultats pour les heures
 for heure, count in compteur_heures.items():
     print(f"À l'heure '{heure}h', il y a eu {count} présences dans les rues interdites.")
@@ -179,7 +188,8 @@ plt.title('Présences dans les Rues Interdites par Heure')
 plt.xticks(heures, [f'{h}h' for h in heures], rotation=45)
 
 max_frequentations_heures = max(frequentations_heures) if frequentations_heures else 1
-plt.yticks(range(0, max_frequentations_heures + 1))
+step_heures = max_frequentations_heures // 10 + 1
+plt.yticks(np.arange(0, max_frequentations_heures + 1, step=step_heures))
 
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 plt.tight_layout()
